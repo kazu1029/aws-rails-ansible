@@ -1,0 +1,88 @@
+---
+- name: Install dependencies for rbenv
+  yum: name={{ item }} state=latest
+  with_items:
+    - git
+- name: Install rbenv
+  become: True
+  become_user: "{{ ec2_user }}"
+  yum: name={{ item }}
+  with_items:
+    - rbenv
+  register: rbenv_changed
+- name: Install dependencies for ruby-build
+  becom: True
+  yum: name={{ item }} state=present
+  with_items:
+    - gcc-c++
+    - glibc-headers
+    - openssl-devel
+    - libyaml-devel
+    - libffi-devel
+    - readline
+    - zlib
+    - libxml2
+    - libxmslt
+    - libxml2-devel
+    - libxslt-devel
+    - readline-devel
+    - zlib-devel
+    - gdbm-devel
+    - ncurses-devel
+- name: Install ruby-build as rbenv plugin
+  become: False
+  git: repo=git@github.com:rbenv/ruby-build.git dest=~/.rbenv/plugins/ruby-build accept_hostkey=yes
+- name: Check rbenv installed
+  shell: rbenv -v
+  register: rbenv_installed
+- name: Add $PATH to ~/.bashrc
+  shell: "{{ item.cmd }}"
+  with_items:
+    - cmd: echo 'export PATH="{{ rbenv_path }}"' >> ~/.bashrc
+    - cmd: echo 'eval "$(rbenv init -)"' >> ~/.bashrc
+  when: rbenv_changed|changed
+- name: Check if rbenv global eq {{ ruby_version }}
+  shell: rbenv global
+  register: rbenv_global
+- name: Install Ruby version {{ ruby_version }}
+  shell: rbenv install {{ ruby_version }}
+  when: rbenv_global.stdout != "{{ ruby_version }}"
+- name: Execute rbenv rehash
+  shell: rbenv rehash
+  when: rbenv_global.stdout != "{{ ruby_version }}"
+- name: Change global Ruby version
+  shell: rbenv global {{ ruby_version }}
+  when: rbenv_global.stdout != "{{ ruby_version }}"
+- name: Execute rbenv rehash
+  shell: rbenv rehash
+  when: rbenv_global.stdout != "{{ ruby_version }}"
+- name: Reload ~/.bashrc for rbenv
+  become: False
+  shell: echo "source ~/.bashrc"
+  when: rbenv_global.stdout != "{{ ruby_version }}"
+- name: Install dependencies for ImageMagic
+  yum: name={{ item }}
+  with_items:
+    - libjpeg-devel
+    - libpng-devel
+    - ImageMagick
+    - ImageMagick-devel
+- name: Install dependencies for Nokogiri
+  yum: name={{ item }} state=present
+  with_itmes:
+    - patch
+- name: Install gem bundler and gem Rails
+  become_user: "{{ ec2_user }}"
+  gem: name={{ item }} executable=.rbenv/shims/gem user_install=False
+  with_items:
+    - bundler
+    - rails
+- name: Install gem nokogiri
+  gem:
+    name: nokogiri
+    version: 1.7.0
+    state: present
+    executable: .rbenv/shims/gem
+    user_install: False
+- name: Execute rbenv rehash
+  shell: rbenv rehash

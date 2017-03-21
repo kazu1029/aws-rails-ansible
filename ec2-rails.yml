@@ -1,0 +1,10 @@
+---
+- hosts: all
+  become: True
+  vars:
+    ec2_user: ec2-user
+    ruby_version: 2.3.3
+    rbenv_path: $HOME/.rbenv/bin:$PATH
+  roles:
+    - ec2-railsenv
+    - ec2-nodejs

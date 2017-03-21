@@ -1,0 +1,15 @@
+---
+- name: Check nodejs already installed
+  shell: which nodejs
+  register: nodejs_installed
+  failed_when: nodejs_installed.rc not in [0, 1]
+- name: Update yum
+  yum: update_cache-yes
+  when: nodejs_installed.rc == 1
+- name: Install Node.js
+  yum: name=nodejs state=present
+  when: nodejs_installed.rc == 1
+- name: Install npm
+  become: True
+  yum: name=npm state=present
+  when: nodejs_installed.rc == 1
