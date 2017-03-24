@@ -12,3 +12,4 @@
     - ec2-railsenv
     - ec2-nodejs
     - ec2-nginx
+    - ec2-mysql

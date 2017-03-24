@@ -1,0 +1,6 @@
+---
+- name: Install mysql
+  yum: name={{ item }}
+  with_items:
+    - http://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm
+    - mysql-devel
