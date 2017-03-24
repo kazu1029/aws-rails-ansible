@@ -1,1 +1,1 @@
-#aws-rails-ansible
+# Ansible for configuring Rails environment on Amazon Linux
