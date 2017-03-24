@@ -1,15 +1,16 @@
 ---
 - name: Check nodejs already installed
-  shell: which nodejs
+  shell: node -v
   register: nodejs_installed
   failed_when: nodejs_installed.rc not in [0, 1]
 - name: Update yum
-  yum: update_cache-yes
+  yum: name=* state=present
   when: nodejs_installed.rc == 1
-- name: Install Node.js
-  yum: name=nodejs state=present
+- name: package for Node.js v6
+  # curlは後でget_urlに変更する
+  shell: "curl --silent --location https://rpm.nodesource.com/setup_6.x | bash -"
   when: nodejs_installed.rc == 1
-- name: Install npm
+- name: Install nodejs
   become: True
-  yum: name=npm state=present
+  yum: name=nodejs
   when: nodejs_installed.rc == 1

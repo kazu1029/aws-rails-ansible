@@ -4,14 +4,12 @@
   with_items:
     - git
 - name: Install rbenv
-  become: True
-  become_user: "{{ ec2_user }}"
-  yum: name={{ item }}
-  with_items:
-    - rbenv
+  become: False
+  become_user: "{{ root_user }}"
+  git: repo=git@github.com:rbenv/rbenv.git dest=~/.rbenv accept_hostkey=yes
   register: rbenv_changed
 - name: Install dependencies for ruby-build
-  becom: True
+  become: True
   yum: name={{ item }} state=present
   with_items:
     - gcc-c++
@@ -22,46 +20,69 @@
     - readline
     - zlib
     - libxml2
-    - libxmslt
     - libxml2-devel
     - libxslt-devel
     - readline-devel
     - zlib-devel
     - gdbm-devel
     - ncurses-devel
+    - make
 - name: Install ruby-build as rbenv plugin
   become: False
   git: repo=git@github.com:rbenv/ruby-build.git dest=~/.rbenv/plugins/ruby-build accept_hostkey=yes
 - name: Check rbenv installed
-  shell: rbenv -v
+  become: False
+  shell: "{{ execute_rbenv }}/rbenv -v"
   register: rbenv_installed
-- name: Add $PATH to ~/.bashrc
-  shell: "{{ item.cmd }}"
-  with_items:
-    - cmd: echo 'export PATH="{{ rbenv_path }}"' >> ~/.bashrc
-    - cmd: echo 'eval "$(rbenv init -)"' >> ~/.bashrc
-  when: rbenv_changed|changed
-- name: Check if rbenv global eq {{ ruby_version }}
-  shell: rbenv global
+- name: enabled ruby-build
+  become: True
+  become_user: "{{ root_user }}"
+  shell: .rbenv/plugins/ruby-build/install.sh
+- name: Add $PATH to ~/.bash_profile
+  become: True
+  lineinfile:
+    dest: ~/.bash_profile
+    line: 'export PATH="$HOME/.rbenv/bin:$PATH"'
+- name: Add eval '(rbenv init -)' to ~/.bash_profile
+  become: True
+  lineinfile:
+    dest: ~/.bash_profile
+    line: 'eval "(rbenv init -)"'
+- name: reload ~/.bash_profile
+  become: True
+  shell: echo "source ~/.bash_profile"
+- name: Check if ruby {{ ruby_version }} installed or not
+  become: False
+  shell: "{{ execute_rbenv }}/rbenv versions executable=/bin/bash"
+  register: rbenv_versions
+- name: Check if rbenv global {{ ruby_version }} or not
+  become: False
+  shell: "{{ execute_rbenv }}/rbenv global"
   register: rbenv_global
 - name: Install Ruby version {{ ruby_version }}
-  shell: rbenv install {{ ruby_version }}
-  when: rbenv_global.stdout != "{{ ruby_version }}"
+  become: False
+  shell: "{{ execute_rbenv }}/rbenv install {{ ruby_version }} executable=/bin/bash"
+  tags:
+    - ruby_install
+  when: (rbenv_versions.stdout_lines[1] != "  {{ ruby_version }}") and (rbenv_global.stdout != "{{ ruby_version }}")
 - name: Execute rbenv rehash
-  shell: rbenv rehash
+  become: False
+  shell: "{{ execute_rbenv }}/rbenv rehash"
   when: rbenv_global.stdout != "{{ ruby_version }}"
 - name: Change global Ruby version
-  shell: rbenv global {{ ruby_version }}
+  become: False
+  shell: "{{ execute_rbenv }}/rbenv global {{ ruby_version }}"
   when: rbenv_global.stdout != "{{ ruby_version }}"
 - name: Execute rbenv rehash
-  shell: rbenv rehash
-  when: rbenv_global.stdout != "{{ ruby_version }}"
-- name: Reload ~/.bashrc for rbenv
   become: False
-  shell: echo "source ~/.bashrc"
+  shell: "{{ execute_rbenv }}/rbenv rehash"
+  when: rbenv_global.stdout != "{{ ruby_version }}"
+- name: Reload ~/.bash_profile for rbenv
+  become: False
+  shell: echo "source ~/.bash_profile"
   when: rbenv_global.stdout != "{{ ruby_version }}"
 - name: Install dependencies for ImageMagic
-  yum: name={{ item }}
+  yum: name={{ item }} state=present
   with_items:
     - libjpeg-devel
     - libpng-devel
@@ -69,10 +90,10 @@
     - ImageMagick-devel
 - name: Install dependencies for Nokogiri
   yum: name={{ item }} state=present
-  with_itmes:
+  with_items:
     - patch
 - name: Install gem bundler and gem Rails
-  become_user: "{{ ec2_user }}"
+  become_user: "{{ root_user }}"
   gem: name={{ item }} executable=.rbenv/shims/gem user_install=False
   with_items:
     - bundler
@@ -85,4 +106,4 @@
     executable: .rbenv/shims/gem
     user_install: False
 - name: Execute rbenv rehash
-  shell: rbenv rehash
+  shell: "{{ execute_rbenv }}/rbenv rehash"
