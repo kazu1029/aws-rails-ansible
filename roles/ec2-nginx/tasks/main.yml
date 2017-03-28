@@ -4,5 +4,5 @@
   become: True
   service: name=nginx enabled=true
 - name: Put nginx.conf
-  template: src=nginx.conf.j2 dest=/etc/nginx/integration.conf backup=true mode=0644
+  template: src=nginx.conf.j2 dest=/etc/nginx/conf.d/integration.conf backup=true mode=0644
   notify: restart nginx
