@@ -1,0 +1,2 @@
+- name: Put unicorn script of starting on /etc/init.d/
+  template: src=unicorn dest=/etc/init.d/unicorn backup=true mode=0644
